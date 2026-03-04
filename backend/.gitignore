@@ -2,3 +2,4 @@
 node_modules/
 legal-casino-3c6cb-firebase-adminsdk-fbsvc-0977b5cf61.json
 .env
+/src/generated/prisma

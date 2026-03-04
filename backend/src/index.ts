@@ -4,7 +4,7 @@ import { cors } from 'hono/cors'
 import { verifyFirebaseToken } from './middleware'
 import { userRoutes } from './routes/user'
 
-const app = new Hono()
+const app = new Hono<{ Variables: { uid: string } }>()
   .use('*', logger())
   .use('*',  cors({
     origin: 'http://localhost:3000',
@@ -20,7 +20,8 @@ const app = new Hono()
     }
     const token = authHeader.split(' ')[1];
     try {
-      await verifyFirebaseToken(token);
+      const decodedToken = await verifyFirebaseToken(token);
+      c.set("uid", decodedToken.uid);
     } catch (error) {
       return c.json({ error: 'Invalid token' }, 401)
     }

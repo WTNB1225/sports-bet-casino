@@ -9,11 +9,10 @@ const app = initializeApp({
 export const verifyFirebaseToken = async(token: string) => {
     try {
         const result = await getAuth(app).verifyIdToken(token);
-        console.log(result);
         return result;
     }
     catch (error) {
-        console.error(error);
+        console.error("Error verifying Firebase token:", error);
         throw error;
     }
 }

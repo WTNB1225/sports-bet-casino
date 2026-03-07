@@ -2,39 +2,131 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import type { AppType } from "../../../backend/src/index";
 import { hc } from "hono/client";
+import { GalleryVerticalEnd } from "lucide-react"
+import { SignUpForm } from "@/components/signup-form";
+import { useState } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export default function Signup() {
+    const [openUserIdModal, setOpenUserIdModal] = useState(false);
+    const [userId, setUserId] = useState("");
+    const [submitting, setSubmitting] = useState(false);
     const googleProvider = new GoogleAuthProvider();
     const client = hc<AppType>('http://localhost:3030');
-    const signInWithGoogle = async() => {
+    const { user } = useAuthContext();
+    console.log("Current user:", user);
+    const registerUserId = async () => {
+        setSubmitting(true);
+        try {
+            if (!user) {
+                console.error("User is not authenticated");
+                return;
+            }
+            const idToken = await user.getIdToken();
+            if (!idToken) {
+                console.error("Failed to get idToken");
+                return;
+            }
+            const res = await client.users.$post(
+                {
+                    json: {
+                        userId: userId.trim(),
+                    }
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${idToken}`,
+                    },
+                }
+            )
+            console.log(await res.json());
+            window.location.href = "/";
+        } catch (error) {
+            console.error("Error registering user ID:", error);
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    /*
+    Googleでサインイン後、ユーザが自前DBに登録されているか確認する。
+    登録されていなければユーザID登録用のモーダルを表示する。
+    登録されていればトップページに遷移する。
+    */
+    const signUpWithGoogle = async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             const idToken = await result.user.getIdToken();
-            const email = result.user.email;
-            const name = result.user.displayName;
-            if (!email || !name) {
-                throw new Error("Google account email or display name is missing.");
+            if (!idToken) {
+                console.error("Failed to get idToken");
+                return;
             }
-            const res = await client.users.$post({
-                json: {
-                    email,
-                    name,
-                },
-            }, {
-                headers: {
-                    Authorization: `Bearer ${idToken}`,
-                },
-            })
-            console.log(result);
-            console.log(res);
+            const res = await client.users.registered.$get(
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${idToken}`,
+                    },
+                }
+            );
+            const data = await res.json();
+            if (data && 'registered' in data && !data.registered) {
+                setOpenUserIdModal(true);
+            } else {
+                window.location.href = "/";
+            }
         } catch (error) {
             console.error(error);
         }
     }
     return (
-        <div>
-            <h1>Signup</h1>
-            <button onClick={signInWithGoogle}>Sign up with Google</button>
-        </div>
-    )
+        <>
+            <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+                <div className="flex w-full max-w-sm flex-col gap-6">
+                    <a href="#" className="flex items-center gap-2 self-center font-medium">
+                        <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                            <GalleryVerticalEnd className="size-4" />
+                        </div>
+                        Legal Casino
+                    </a>
+                    <SignUpForm signUpWithGoogle={signUpWithGoogle} />
+                </div>
+            </div>
+
+            {openUserIdModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-2 text-lg font-semibold">ユーザーIDを登録</h2>
+                        <p className="mb-4 text-sm text-gray-600">
+                            初回ログインです。ユーザーIDを入力してください。
+                        </p>
+                        <input
+                            type="text"
+                            value={userId}
+                            onChange={(e) => setUserId(e.target.value)}
+                            placeholder="userID"
+                            className="mb-4 w-full rounded border p-2"
+                            minLength={3}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                className="rounded border px-4 py-2"
+                                onClick={() => setOpenUserIdModal(false)}
+                                disabled={submitting}
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+                                onClick={registerUserId}
+                                disabled={submitting || !userId.trim()}
+                            >
+                                {submitting ? "登録中..." : "登録"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
 }

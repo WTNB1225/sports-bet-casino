@@ -4,7 +4,7 @@ import { cors } from 'hono/cors'
 import { verifyFirebaseToken } from './middleware'
 import { userRoutes } from './routes/user'
 
-const app = new Hono<{ Variables: { uid: string } }>()
+const app = new Hono<{ Variables: { uid: string; email: string } }>()
   .use('*', logger())
   .use('*',  cors({
     origin: 'http://localhost:3000',
@@ -21,7 +21,14 @@ const app = new Hono<{ Variables: { uid: string } }>()
     const token = authHeader.split(' ')[1];
     try {
       const decodedToken = await verifyFirebaseToken(token);
+      if (!decodedToken.uid) {
+        return c.json({ error: 'UID not found in token' }, 401)
+      }
       c.set("uid", decodedToken.uid);
+      if (!decodedToken.email) {
+        return c.json({ error: 'Email not found in token' }, 401)
+      }
+      c.set("email", decodedToken.email);
     } catch (error) {
       return c.json({ error: 'Invalid token' }, 401)
     }

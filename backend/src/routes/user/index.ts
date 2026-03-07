@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { createUserSchema } from "./scheme";
 import { prisma } from "../../lib/prisma";
 
-export const userRoutes = new Hono<{ Variables: { uid: string } }>()
+export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }>()
     .get("/registered", async (c) => { //firebase登録後、自前DBにユーザが存在するか確認するエンドポイント
         const uid = c.get("uid");
         if (!uid) {
@@ -22,15 +22,16 @@ export const userRoutes = new Hono<{ Variables: { uid: string } }>()
 
     })
     .post("/", zValidator("json", createUserSchema), async (c) => {
-        const { email, name } = c.req.valid("json");
-        console.log(email, name);
+        const userId = c.req.valid("json").userId;
+        const uid = c.get("uid");
+        const email = c.get("email");
+        console.log(email, userId, uid);
         try {
             await prisma.user.create({
                 data: {
-                    firebaseUid: c.get("uid"),
+                    firebaseUid: uid,
                     email,
-                    userId: name,
-                    password: "dummy", // パスワードはダミーで保存（Google認証のみを想定）
+                    userId: userId,
                 },
             });
         } catch (error) {

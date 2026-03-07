@@ -1,4 +1,4 @@
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import type { AppType } from "../../../backend/src/index";
 import { hc } from "hono/client";
@@ -14,7 +14,6 @@ export default function Signup() {
     const googleProvider = new GoogleAuthProvider();
     const client = hc<AppType>('http://localhost:3030');
     const { user } = useAuthContext();
-    console.log("Current user:", user);
     const registerUserId = async () => {
         setSubmitting(true);
         try {
@@ -48,6 +47,23 @@ export default function Signup() {
         }
     }
 
+    const signUpWithEmail = async (email: string, password: string) => {
+        try {
+            if (password.length < 6) {
+                console.error("Password should be at least 6 characters");
+                return;
+            }
+            const result = await createUserWithEmailAndPassword(auth, email, password);
+            const idToken = await result.user.getIdToken();
+            if (!idToken) {
+                console.error("Failed to get idToken");
+                return;
+            }
+            console.log("User created with email:", result.user);
+        } catch (error) {
+            console.error("Error creating user with email:", error);
+        }
+    }
     /*
     Googleでサインイン後、ユーザが自前DBに登録されているか確認する。
     登録されていなければユーザID登録用のモーダルを表示する。
@@ -89,7 +105,7 @@ export default function Signup() {
                         </div>
                         Legal Casino
                     </a>
-                    <SignUpForm signUpWithGoogle={signUpWithGoogle} />
+                    <SignUpForm signUpWithEmail={signUpWithEmail} signUpWithGoogle={signUpWithGoogle} />
                 </div>
             </div>
 

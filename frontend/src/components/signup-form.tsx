@@ -12,19 +12,40 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useState } from "react"
 
 interface SignUpFormProps extends React.ComponentProps<"div"> {
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithGoogle: () => Promise<void>;
 }
 
 export function SignUpForm({
   className,
+  signUpWithEmail,
   signUpWithGoogle,
   ...props
 }: SignUpFormProps) {
+  const [userId, setUserId] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (password.length < 6) {
+      console.error("Password should be at least 6 characters");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await signUpWithEmail(email, password);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -32,7 +53,7 @@ export function SignUpForm({
           <CardTitle className="text-xl">Create an account</CardTitle>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -40,22 +61,40 @@ export function SignUpForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={submitting}
                 />
               </Field>
               <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-4 hover:underline"
-                  >
-                  </a>
-                </div>
-                <Input id="password" type="password" required />
+                <FieldLabel htmlFor="userId">User ID</FieldLabel>
+                <Input
+                  id="userId"
+                  type="text"
+                  placeholder="Enter your user ID"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  required
+                  disabled={submitting}
+                />
               </Field>
               <Field>
-                <Button>Sign up</Button>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
+                  required
+                  disabled={submitting}
+                />
+              </Field>
+              <Field>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Signing up..." : "Sign up"}
+                </Button>
               </Field>
               <CardDescription>
                 Sign up with your Apple or Google account

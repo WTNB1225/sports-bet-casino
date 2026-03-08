@@ -6,10 +6,12 @@ import { GalleryVerticalEnd } from "lucide-react"
 import { SignUpForm } from "@/components/signup-form";
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router";
 
 const googleProvider = new GoogleAuthProvider();
 
 export default function Signup() {
+    const navigate = useNavigate();
     const [openUserIdModal, setOpenUserIdModal] = useState(false);
     const [userId, setUserId] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -43,7 +45,7 @@ export default function Signup() {
             )
             console.log(await res.json());
             setPendingAuthUser(null);
-            window.location.href = "/";
+            navigate("/");
         } catch (error) {
             console.error("Error registering user ID:", error);
         } finally {
@@ -77,7 +79,7 @@ export default function Signup() {
                 }
             )
             console.log("User created with email:", result.user);
-            window.location.href = "/";
+            navigate("/");
         } catch (error) {
             console.error("Error creating user with email:", error);
         }
@@ -108,7 +110,7 @@ export default function Signup() {
             if (data && 'registered' in data && !data.registered) {
                 setOpenUserIdModal(true);
             } else {
-                window.location.href = "/";
+                navigate("/");
             }
         } catch (error) {
             console.error(error);

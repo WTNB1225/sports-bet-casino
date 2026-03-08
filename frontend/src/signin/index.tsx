@@ -5,11 +5,13 @@ import { signInWithPopup, GoogleAuthProvider, signInWithCustomToken } from "fire
 import { auth } from "@/lib/firebase";
 import type { AppType } from "../../../backend/src/index";
 import { hc } from "hono/client";
+import { useNavigate } from "react-router";
 
 const googleProvider = new GoogleAuthProvider();
 
 export default function SignIn() {
     const { user, loading } = useAuthContext();
+    const navigate = useNavigate();
     const client = hc<AppType>(import.meta.env.VITE_BACKEND_URL as string);
     if (loading) {
         return (
@@ -19,7 +21,7 @@ export default function SignIn() {
         );
     }
     if (user) {
-        window.location.href = "/";
+        navigate("/");
         return null;
     }
     const signInWithEmail = async (identifier: string, password: string) => {
@@ -38,7 +40,7 @@ export default function SignIn() {
                 throw new Error("Invalid credentials");
             }
             await signInWithCustomToken(auth, data.customToken);
-            window.location.href = "/";
+            navigate("/");
         } catch (error) {
             console.error("Error signing in:", error);
         }
@@ -46,7 +48,7 @@ export default function SignIn() {
     const signInWithGoogle = async () => {
         try {
             await signInWithPopup(auth, googleProvider);
-            window.location.href = "/";
+            navigate("/");
         } catch (error) {
             console.error("Error signing in with Google:", error);
         }

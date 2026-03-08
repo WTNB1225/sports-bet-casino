@@ -16,6 +16,7 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
   .use('*', async (c, next) => {
     if (c.req.path === '/users/sign-in') {
       await next();
+      return
     }
     const authHeader = c.req.header('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

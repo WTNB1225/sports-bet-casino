@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { onAuthStateChanged, type User } from '@firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 
@@ -7,14 +7,14 @@ export type GlobalAuthState = {
   user: User | null | undefined
 }
 
-const initalState: GlobalAuthState = {
+const initialState: GlobalAuthState = {
     user: undefined,
 }
 
-const AuthContext = createContext<GlobalAuthState>(initalState);
+const AuthContext = createContext<GlobalAuthState>(initialState);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<GlobalAuthState>(initalState);
+  const [user, setUser] = useState<GlobalAuthState>(initialState);
 
   useEffect(() => {
     try {
@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     })
     } catch (error) {
         console.error("Error setting up auth state listener:", error);
-        setUser(initalState);
+        setUser(initialState);
     }
   }, []);
 

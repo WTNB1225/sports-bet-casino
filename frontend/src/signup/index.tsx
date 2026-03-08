@@ -1,4 +1,4 @@
-import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import type { AppType } from "../../../backend/src/index";
 import { hc } from "hono/client";
@@ -11,17 +11,19 @@ export default function Signup() {
     const [openUserIdModal, setOpenUserIdModal] = useState(false);
     const [userId, setUserId] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [pendingAuthUser, setPendingAuthUser] = useState<User | null>(null);
     const googleProvider = new GoogleAuthProvider();
-    const client = hc<AppType>('http://localhost:3030');
+    const client = hc<AppType>(import.meta.env.VITE_BACKEND_URL as string);
     const { user } = useAuthContext();
     const registerUserId = async () => {
         setSubmitting(true);
         try {
-            if (!user) {
+            const targetUser = pendingAuthUser ?? user;
+            if (!targetUser) {
                 console.error("User is not authenticated");
                 return;
             }
-            const idToken = await user.getIdToken();
+            const idToken = await targetUser.getIdToken();
             if (!idToken) {
                 console.error("Failed to get idToken");
                 return;
@@ -39,6 +41,7 @@ export default function Signup() {
                 }
             )
             console.log(await res.json());
+            setPendingAuthUser(null);
             window.location.href = "/";
         } catch (error) {
             console.error("Error registering user ID:", error);
@@ -47,7 +50,7 @@ export default function Signup() {
         }
     }
 
-    const signUpWithEmail = async (email: string, password: string) => {
+    const signUpWithEmail = async (email: string, password: string, userId: string) => {
         try {
             if (password.length < 6) {
                 console.error("Password should be at least 6 characters");
@@ -59,7 +62,21 @@ export default function Signup() {
                 console.error("Failed to get idToken");
                 return;
             }
+            await client.users.$post(
+                {
+                    json: {
+                        userId: userId,
+                    }
+                }
+                ,
+                {
+                    headers: {
+                        Authorization: `Bearer ${idToken}`,
+                    },
+                }
+            )
             console.log("User created with email:", result.user);
+            window.location.href = "/";
         } catch (error) {
             console.error("Error creating user with email:", error);
         }
@@ -72,6 +89,7 @@ export default function Signup() {
     const signUpWithGoogle = async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
+            setPendingAuthUser(result.user);
             const idToken = await result.user.getIdToken();
             if (!idToken) {
                 console.error("Failed to get idToken");
@@ -127,7 +145,10 @@ export default function Signup() {
                         <div className="flex justify-end gap-2">
                             <button
                                 className="rounded border px-4 py-2"
-                                onClick={() => setOpenUserIdModal(false)}
+                                onClick={() => {
+                                    setOpenUserIdModal(false);
+                                    setPendingAuthUser(null);
+                                }}
                                 disabled={submitting}
                             >
                                 キャンセル

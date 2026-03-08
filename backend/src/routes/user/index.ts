@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { createUserSchema } from "./scheme";
+import { createUserSchema } from "./schema";
 import { prisma } from "../../lib/prisma";
 
 export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }>()
@@ -25,7 +25,6 @@ export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }
         const userId = c.req.valid("json").userId;
         const uid = c.get("uid");
         const email = c.get("email");
-        console.log(email, userId, uid);
         try {
             await prisma.user.create({
                 data: {

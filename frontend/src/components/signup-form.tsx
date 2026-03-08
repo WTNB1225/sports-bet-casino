@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { useState } from "react"
 
 interface SignUpFormProps extends React.ComponentProps<"div"> {
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, userId: string) => Promise<void>;
   signUpWithGoogle: () => Promise<void>;
 }
 
@@ -31,7 +31,6 @@ export function SignUpForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (password.length < 6) {
@@ -40,7 +39,7 @@ export function SignUpForm({
     }
     setSubmitting(true);
     try {
-      await signUpWithEmail(email, password);
+      await signUpWithEmail(email, password, userId);
     } finally {
       setSubmitting(false);
     }

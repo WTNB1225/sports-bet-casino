@@ -7,7 +7,7 @@ import { userRoutes } from './routes/user'
 const app = new Hono<{ Variables: { uid: string; email: string } }>()
   .use('*', logger())
   .use('*',  cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN as string || 'http://localhost:3000',
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['POST', 'GET', 'OPTIONS'],
     maxAge: 600,

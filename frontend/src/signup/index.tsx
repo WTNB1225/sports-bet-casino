@@ -7,12 +7,13 @@ import { SignUpForm } from "@/components/signup-form";
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 
+const googleProvider = new GoogleAuthProvider();
+
 export default function Signup() {
     const [openUserIdModal, setOpenUserIdModal] = useState(false);
     const [userId, setUserId] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [pendingAuthUser, setPendingAuthUser] = useState<User | null>(null);
-    const googleProvider = new GoogleAuthProvider();
     const client = hc<AppType>(import.meta.env.VITE_BACKEND_URL as string);
     const { user } = useAuthContext();
     const registerUserId = async () => {

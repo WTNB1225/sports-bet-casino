@@ -18,13 +18,24 @@ const app = initializeApp({
     })
 })
 
+const auth = getAuth(app);
+
 export const verifyFirebaseToken = async(token: string) => {
     try {
-        const result = await getAuth(app).verifyIdToken(token);
+        const result = await auth.verifyIdToken(token);
         return result;
     }
     catch (error) {
         console.error("Error verifying Firebase token:", error);
+        throw error;
+    }
+}
+
+export const createFirebaseCustomToken = async (uid: string) => {
+    try {
+        return await auth.createCustomToken(uid);
+    } catch (error) {
+        console.error("Error creating Firebase custom token:", error);
         throw error;
     }
 }

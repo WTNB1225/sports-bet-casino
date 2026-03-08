@@ -14,6 +14,9 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
     credentials: true,
   }))
   .use('*', async (c, next) => {
+    if (c.req.path === '/users/sign-in') {
+      await next();
+    }
     const authHeader = c.req.header('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return c.json({ error: 'Unauthorized' }, 401)

@@ -1,7 +1,7 @@
 import { SignInForm } from "@/components/signin-form";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { signInWithPopup, GoogleAuthProvider, signInWithCustomToken } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider, signInWithCustomToken, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import type { AppType } from "../../../backend/src/index";
 import { hc } from "hono/client";
@@ -69,8 +69,11 @@ export default function SignIn() {
                 return;
             }
             const data = await res.json();
-            if (data && 'registered' in data && !data.registered) {
-                await auth.signOut();
+            if (!data || !("registered" in data)) {
+                console.error("Unexpected response from /users/registered endpoint:", data);
+                return;
+            } else if (data && 'registered' in data && !data.registered) {
+                await signOut(auth);
                 navigate("/signup");
             } else {
                 navigate("/");

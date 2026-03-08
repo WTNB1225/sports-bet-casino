@@ -107,7 +107,10 @@ export default function Signup() {
                 }
             );
             const data = await res.json();
-            if (data && 'registered' in data && !data.registered) {
+            if (!data || !("registered" in data)) {
+                console.error("Unexpected response from /users/registered endpoint:", data);
+                return;
+            } else if (data && 'registered' in data && !data.registered) {
                 setOpenUserIdModal(true);
             } else {
                 navigate("/");

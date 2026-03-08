@@ -57,7 +57,6 @@ export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }
             }
 
             const firebaseData = await firebaseRes.json() as { localId?: string };
-            console.log("Firebase sign-in response:", firebaseData);
             if (!firebaseData.localId || firebaseData.localId !== user.firebaseUid) {
                 return c.json({ error: "Invalid credentials" }, 401);
             }

@@ -5,6 +5,7 @@ import { signInWithPopup, GoogleAuthProvider, signInWithCustomToken } from "fire
 import { auth } from "@/lib/firebase";
 import type { AppType } from "../../../backend/src/index";
 import { hc } from "hono/client";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 
 const googleProvider = new GoogleAuthProvider();
@@ -13,16 +14,19 @@ export default function SignIn() {
     const { user, loading } = useAuthContext();
     const navigate = useNavigate();
     const client = hc<AppType>(import.meta.env.VITE_BACKEND_URL as string);
+
+    useEffect(() => {
+        if (user) {
+            navigate("/");
+        }
+    }, [user, navigate]);
+
     if (loading) {
         return (
             <div className="flex min-h-svh items-center justify-center">
                 <p>Loading...</p>
             </div>
         );
-    }
-    if (user) {
-        navigate("/");
-        return null;
     }
     const signInWithEmail = async (identifier: string, password: string) => {
         try {

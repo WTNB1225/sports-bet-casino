@@ -6,13 +6,16 @@ import { GalleryVerticalEnd } from "lucide-react"
 import { SignUpForm } from "@/components/signup-form";
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router";
+
+const googleProvider = new GoogleAuthProvider();
 
 export default function Signup() {
+    const navigate = useNavigate();
     const [openUserIdModal, setOpenUserIdModal] = useState(false);
     const [userId, setUserId] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [pendingAuthUser, setPendingAuthUser] = useState<User | null>(null);
-    const googleProvider = new GoogleAuthProvider();
     const client = hc<AppType>(import.meta.env.VITE_BACKEND_URL as string);
     const { user } = useAuthContext();
     const registerUserId = async () => {
@@ -42,7 +45,7 @@ export default function Signup() {
             )
             console.log(await res.json());
             setPendingAuthUser(null);
-            window.location.href = "/";
+            navigate("/");
         } catch (error) {
             console.error("Error registering user ID:", error);
         } finally {
@@ -76,7 +79,7 @@ export default function Signup() {
                 }
             )
             console.log("User created with email:", result.user);
-            window.location.href = "/";
+            navigate("/");
         } catch (error) {
             console.error("Error creating user with email:", error);
         }
@@ -95,7 +98,7 @@ export default function Signup() {
                 console.error("Failed to get idToken");
                 return;
             }
-            const res = await client.users.registered.$get(
+            const res = await client.users.registered.$post(
                 {},
                 {
                     headers: {
@@ -104,10 +107,13 @@ export default function Signup() {
                 }
             );
             const data = await res.json();
-            if (data && 'registered' in data && !data.registered) {
+            if (!data || !("registered" in data)) {
+                console.error("Unexpected response from /users/registered endpoint:", data);
+                return;
+            } else if (data && 'registered' in data && !data.registered) {
                 setOpenUserIdModal(true);
             } else {
-                window.location.href = "/";
+                navigate("/");
             }
         } catch (error) {
             console.error(error);

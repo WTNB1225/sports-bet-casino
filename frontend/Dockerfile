@@ -10,4 +10,4 @@ RUN bun install
 
 EXPOSE 3000
 
-CMD ["sleep", "infinity"]
+CMD ["bun", "run", "dev"]

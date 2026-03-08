@@ -5,7 +5,7 @@ import { prisma } from "../../lib/prisma";
 import { createFirebaseCustomToken } from "../../middleware";
 
 export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }>()
-    .get("/registered", async (c) => { //firebase登録後、自前DBにユーザが存在するか確認するエンドポイント
+    .post("/registered", async (c) => { //firebase登録後、自前DBにユーザが存在するか確認するエンドポイント
         const uid = c.get("uid");
         if (!uid) {
             return c.json({ error: "Unauthorized" }, 401);
@@ -32,7 +32,6 @@ export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }
                     ? { email: normalizedIdentifier }
                     : { userId: normalizedIdentifier },
             });
-            console.log("User found:", user);
             if (!user) {
                 return c.json({ error: "Invalid credentials" }, 401);
             }
@@ -52,7 +51,6 @@ export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }
                     returnSecureToken: true,
                 }),
             });
-            console.log("Firebase sign-in response status:", firebaseRes);
 
             if (!firebaseRes.ok) {
                 return c.json({ error: "Invalid credentials" }, 401);

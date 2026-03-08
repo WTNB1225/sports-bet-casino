@@ -47,8 +47,30 @@ export default function SignIn() {
     };
     const signInWithGoogle = async () => {
         try {
-            await signInWithPopup(auth, googleProvider);
-            navigate("/");
+            const result = await signInWithPopup(auth, googleProvider);
+            const idToken = await result.user.getIdToken();
+            if (!idToken) {
+                console.error("Failed to get idToken");
+                return;
+            }
+            const res = await client.users.registered.$post(
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${idToken}`,
+                    }
+                });
+            if (!res.ok) {
+                console.error("Failed to check registration status");
+                return;
+            }
+            const data = await res.json();
+            if (data && 'registered' in data && !data.registered) {
+                await auth.signOut();
+                navigate("/signup");
+            } else {
+                navigate("/");
+            }
         } catch (error) {
             console.error("Error signing in with Google:", error);
         }

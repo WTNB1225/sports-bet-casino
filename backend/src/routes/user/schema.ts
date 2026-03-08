@@ -6,7 +6,7 @@ const createUserSchema = z.object({
 
 const signInWithIdentifierSchema = z.object({
     identifier: z.string().trim().min(3).max(100),
-    password: z.string(),
+    password: z.string().min(6),
 })
 
 export { createUserSchema, signInWithIdentifierSchema };

@@ -98,7 +98,7 @@ export default function Signup() {
                 console.error("Failed to get idToken");
                 return;
             }
-            const res = await client.users.registered.$get(
+            const res = await client.users.registered.$post(
                 {},
                 {
                     headers: {

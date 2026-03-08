@@ -10,7 +10,7 @@ function App() {
 
   return (
     <>
-      <div>{user ? `Hello, ${user.email}!` : 'Not signed in.'}</div>
+      <div>{loading ? 'Loading...' : (user ? `Hello, ${user.email}!` : 'Not signed in.')}</div>
       <div>
         <a href="https://vite.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />

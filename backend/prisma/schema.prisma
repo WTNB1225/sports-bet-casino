@@ -25,9 +25,28 @@ model Account {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+//競技種目
+model Sport {
+  id     String  @id
+  name   String
+  leagues League[]
+}
+
+//リーグ
+model League {
+  id      String  @id
+  name    String
+  sportId String
+  sport   Sport   @relation(fields: [sportId], references: [id])
+  events  Event[]
+}
+
+//試合
 model Event {
-  id        String   @id @default(cuid())
+  id        String   @id
   name      String
+  leagueId  String
+  league    League   @relation(fields: [leagueId], references: [id])
   startTime DateTime
   markets   Market[]
 }
@@ -38,14 +57,17 @@ model Market {
   marketType String
   event      Event  @relation(fields: [eventId], references: [id])
   odds       Odd[]
+  @@unique([eventId, marketType]) // 同一イベント内で同一マーケットタイプは存在できないようにする
 }
 
 model Odd {
   id       String  @id @default(cuid())
   marketId String
+  name     String  // "Arsenal", "Draw", "Over 2.5" などの名前が必要
   value    Decimal @db.Decimal(10, 2)
   bets     Bet[]
   market   Market  @relation(fields: [marketId], references: [id])
+  @@unique([marketId, name]) // 同一マーケット内で同一オッズ名は存在できないようにする
 }
 
 model Bet {

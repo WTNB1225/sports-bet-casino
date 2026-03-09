@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { createUserSchema, signInWithIdentifierSchema } from "./schema";
-import { prisma } from "../../lib/prisma";
+import { prisma } from "../../../../backend/lib/prisma";
 import { createFirebaseCustomToken } from "../../middleware";
 
 export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }>()
@@ -73,13 +73,18 @@ export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }
         const uid = c.get("uid");
         const email = c.get("email");
         try {
-            await prisma.user.create({
+                await prisma.user.create({
                 data: {
+                    userId,
                     firebaseUid: uid,
                     email,
-                    userId: userId,
-                },
-            });
+                    account: {
+                        create: {
+                                balance: 0n,
+                        }
+                    }
+                }
+            })
         } catch (error) {
             console.error(error);
             return c.json({ error: "Failed to create user" }, 500);

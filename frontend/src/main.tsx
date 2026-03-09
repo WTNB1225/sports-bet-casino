@@ -6,6 +6,7 @@ import App from './App.tsx'
 import Signup from './signup/index.tsx'
 import SignIn from './signin/index.tsx'
 import Logout from './logout/index.tsx'
+import Sports from './sports/index.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<App />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/sports" element={<Sports />} />
           <Route path="/logout" element={<Logout />} />
         </Routes>
       </AuthProvider>

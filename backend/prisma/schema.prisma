@@ -13,10 +13,61 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Outcome {
+  PENDING
+  WON
+  LOST
+  VOID // ベットが無効になった場合（例: イベントがキャンセルされた場合）返金するstatus
+}
+
 model User {
-  id            String   @id @default(cuid())
-  firebaseUid   String   @unique
-  userId        String   @unique
-  email         String   @unique
+  id          String   @id @default(cuid())
+  firebaseUid String   @unique
+  userId      String   @unique
+  email       String   @unique
+  createdAt   DateTime @default(now())
+  account     Account?
+  bets        Bet[]
+}
+
+model Account {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique
+  balance   BigInt   @default(0) @db.BigInt
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  name      String
+  startTime DateTime
+  markets   Market[]
+}
+
+model Market {
+  id         String @id @default(cuid())
+  event      Event  @relation(fields: [eventId], references: [id])
+  eventId    String
+  marketType String
+  odds       Odd[]
+}
+
+model Odd {
+  id       String @id @default(cuid())
+  market   Market @relation(fields: [marketId], references: [id])
+  marketId String
+  value    Decimal @db.Decimal(10, 2)
+  bets     Bet[]
+}
+
+model Bet {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  odd       Odd      @relation(fields: [oddId], references: [id])
+  oddId     String
+  amount    BigInt   @db.BigInt
+  outcome   Outcome  @default(PENDING)
   createdAt DateTime @default(now())
 }

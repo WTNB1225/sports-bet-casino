@@ -52,7 +52,7 @@ model Event {
 }
 
 model Market {
-  id         String @id @default(cuid())
+  id         String @id
   eventId    String
   marketType String
   event      Event  @relation(fields: [eventId], references: [id])

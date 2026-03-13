@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
-import { verifyFirebaseToken } from './middleware'
+import { verifyFirebaseToken } from './middleware/middleware'
 import { userRoutes } from './routes/user'
 import { oddsRoutes } from './routes/odds'
 

@@ -76,9 +76,7 @@ export default function League() {
             <div className="rounded-2xl border border-amber-100/20 bg-slate-900 p-6 shadow-lg">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">League Detail</p>
                 <h2 className="mt-2 text-3xl font-semibold text-amber-50 md:text-4xl">{leagueId}</h2>
-                {eventDetails && eventDetails.markets.length > 0 ? (
-                    <p className="mt-2 text-sm text-slate-300">League: {eventDetails.markets[0].event.leagueId}</p>
-                ) : (
+                {eventDetails && eventDetails.markets.length === 0 && (
                     <p className="mt-2 text-sm text-slate-400">Loading league details...</p>
                 )}
             </div>
@@ -103,7 +101,15 @@ export default function League() {
                                     {new Date(market.event.startTime).toLocaleString()}
                                 </p>
 
-                                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                                <div
+                                    className={`mt-3 grid gap-2 ${
+                                        market.odds.length === 2
+                                            ? "sm:grid-cols-2"
+                                            : market.odds.length === 3
+                                                ? "sm:grid-cols-3"
+                                                : "sm:grid-cols-1"
+                                    }`}
+                                >
                                     {orderOddsforDisplay(market.odds).map((odd) => (
                                         <button
                                             type="button"

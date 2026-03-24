@@ -1,4 +1,4 @@
-import { boolean, z } from 'zod'
+import { z } from 'zod'
 
 const createOddsSchema = z.object({
     sportsLeague: z.string(),

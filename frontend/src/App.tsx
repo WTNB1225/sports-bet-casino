@@ -32,45 +32,54 @@ function App() {
                 <span className="block text-sky-200">Bet with confidence.</span>
               </h1>
               <p className="mx-auto max-w-2xl text-base leading-7 text-slate-300 lg:mx-0">
-                ライブテーブル、スポーツベット、限定キャンペーンを1つの画面で管理。
+                ライブテーブル、スポーツベット。
                 スピード感のあるプレイ体験をホームからすぐ始められます。
               </p>
-
               <div className="flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
                 <Link
-                  to={user ? '/sports' : '/signin'}
+                  to={user ? '/casino' : '/signin'}
                   className="inline-flex h-11 items-center justify-center rounded-full bg-amber-300 px-6 text-sm font-semibold text-slate-900 transition hover:bg-amber-200"
                 >
-                  {user ? 'スポーツベットへ' : 'ログインして開始'}
+                  {user ? 'カジノへ' : 'ログインして開始'}
                 </Link>
-                <Link
-                  to="/signup"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-amber-100/50 bg-transparent px-6 text-sm font-semibold text-amber-50 transition hover:bg-amber-100/10"
-                >
-                  無料アカウント作成
-                </Link>
+                <div className="flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
+                  <Link
+                    to={user ? '/sports' : '/signin'}
+                    className="inline-flex h-11 items-center justify-center rounded-full bg-amber-300 px-6 text-sm font-semibold text-slate-900 transition hover:bg-amber-200"
+                  >
+                    {user ? 'スポーツベットへ' : 'ログインして開始'}
+                  </Link>
+                  {!user && (
+                    <Link
+                      to="/signup"
+                      className="inline-flex h-11 items-center justify-center rounded-full border border-amber-100/50 bg-transparent px-6 text-sm font-semibold text-amber-50 transition hover:bg-amber-100/10"
+                    >
+                      無料アカウント作成
+                    </Link>
+                  )}
+                </div>
+
+                <p className="text-sm text-slate-300/90">
+                  {loading ? 'Loading...' : user ? `Welcome back, ${user.email}` : 'Guest mode'}
+                </p>
               </div>
 
-              <p className="text-sm text-slate-300/90">
-                {loading ? 'Loading...' : user ? `Welcome back, ${user.email}` : 'Guest mode'}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-amber-100/20 bg-white/5 p-5 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">Live Pot</p>
-              <p className="mt-2 text-4xl font-semibold text-amber-200">$2,483,920</p>
-              <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                <div className="rounded-xl bg-slate-950/50 p-3">
-                  <p className="text-xs text-slate-400">Players</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-100">8,219</p>
-                </div>
-                <div className="rounded-xl bg-slate-950/50 p-3">
-                  <p className="text-xs text-slate-400">Tables</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-100">174</p>
-                </div>
-                <div className="rounded-xl bg-slate-950/50 p-3">
-                  <p className="text-xs text-slate-400">RTP Avg</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-100">96.8%</p>
+              <div className="rounded-2xl border border-amber-100/20 bg-white/5 p-5 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">Live Pot</p>
+                <p className="mt-2 text-4xl font-semibold text-amber-200">$2,483,920</p>
+                <div className="mt-5 grid grid-cols-3 gap-3 text-center">
+                  <div className="rounded-xl bg-slate-950/50 p-3">
+                    <p className="text-xs text-slate-400">Players</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-100">8,219</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-950/50 p-3">
+                    <p className="text-xs text-slate-400">Tables</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-100">174</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-950/50 p-3">
+                    <p className="text-xs text-slate-400">RTP Avg</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-100">96.8%</p>
+                  </div>
                 </div>
               </div>
             </div>

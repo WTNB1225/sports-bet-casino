@@ -13,6 +13,8 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AuthProvider } from './contexts/AuthContext.tsx'
 
+document.documentElement.classList.add('dark')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

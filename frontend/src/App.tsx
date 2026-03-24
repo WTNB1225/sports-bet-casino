@@ -15,7 +15,7 @@ const liveTable = [
 
 function App() {
   const { user, loading } = useAuthContext()
-
+  console.log("App component rendered with user:", user, "loading:", loading);
   return (
     <div className="flex min-h-full items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] border border-amber-100/70 bg-[linear-gradient(135deg,_rgba(17,24,39,0.97)_0%,_rgba(32,22,8,0.98)_100%)] p-6 shadow-[0_28px_90px_rgba(17,24,39,0.34)] md:p-10">

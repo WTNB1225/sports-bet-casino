@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { verifyFirebaseToken } from './middleware/middleware'
 import { userRoutes } from './routes/user'
 import { oddsRoutes } from './routes/odds'
+import { eventRoutes } from './routes/event'
 
 const app = new Hono<{ Variables: { uid: string; email: string } }>()
   .use('*', logger())
@@ -15,7 +16,7 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
     credentials: true,
   }))
   .use('*', async (c, next) => {
-    if (c.req.path === '/users/sign-in' || c.req.path === '/odds/sync') {
+    if (c.req.path === '/users/sign-in' || c.req.path === '/odds/sync' || (c.req.path).startsWith("/events")) {
       await next();
       return
     }
@@ -41,6 +42,7 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
   })
   .route('/users', userRoutes)
   .route('/odds', oddsRoutes)
+  .route('/events', eventRoutes)
   
 export default { 
   port: 3030, 

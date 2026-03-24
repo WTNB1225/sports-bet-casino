@@ -3,6 +3,36 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import "dotenv/config";
 
+export interface Outcome {
+  name: string;
+  price: number;
+}
+
+export interface Market {
+  key: string; // 例: "h2h"
+  last_update: string; // ISO 8601 形式
+  outcomes: Outcome[];
+}
+
+export interface Bookmaker {
+  key: string;   // 例: "pinnacle"
+  title: string; // 例: "Pinnacle"
+  last_update: string;
+  markets: Market[];
+}
+
+export interface Match {
+  id: string;
+  sport_key: string;
+  sport_title: string;
+  commence_time: string; // ISO 8601 形式
+  home_team: string;
+  away_team: string;
+  bookmakers: Bookmaker[];
+}
+
+export type OddsResponse = Match[];
+
 export const syncOdds = async (sportsLeague: string, region: string, market: string, bookmaker: string) => {
     try {
         const res = await fetch(
@@ -11,8 +41,15 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
         if (!res.ok) {
             throw new HTTPException(500, { message: "Failed to fetch odds from external API" });
         }
-        const oddsData = await res.json();
+        const oddsData: OddsResponse = await res.json();
+        console.log(oddsData)
         for (const item of oddsData) {
+            console.log(item.bookmakers)
+            console.log(`${item.bookmakers?.[0]?.title} - ${item.home_team} vs ${item.away_team} (${item.commence_time})`);
+            if (!item.bookmakers || item.bookmakers.length === 0) {
+                console.warn(`No bookmaker data for event ${item.id}, skipping...`);
+                continue;
+            }
             const sportId = item.sport_key.split("_")[0];
             await prisma.$transaction(async (tx) => {
                 const sport = await tx.sport.upsert({
@@ -46,6 +83,9 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                 });
                 const bookmaker = item.bookmakers[0];
                 for (const marketData of bookmaker.markets) {
+                    if (!marketData.outcomes?.length) {
+                        continue;
+                    }
                     const market = await tx.market.upsert({
                         where: {
                             id: `${event.id}_${marketData.key}`,
@@ -58,7 +98,7 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                         }
                     });
                     //TODO: outcomeはapi依存, market[0]はh2h指定する場合正しいが、他のmarketの場合は要検討
-                    for (const outcome of bookmaker.markets[0].outcomes) {
+                    for (const outcome of marketData.outcomes) {
                         await tx.odd.upsert({
                             where: {
                                 id: `${event.id}_${marketData.key}_${outcome.name}`,

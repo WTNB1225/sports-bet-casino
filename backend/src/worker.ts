@@ -26,9 +26,10 @@ export function getRefreshInterval(startTime: Date): number {
 const job = new Cron("*/1 * * * *", async () => {
     console.log("Running scheduled job to sync odds...");
     try {
-        await syncOdds("soccer_epl", "eu", "h2h", "pinnacle");
+        await syncOdds("baseball_mlb_preseason", "eu", "h2h", "pinnacle");
         console.log("Odds synced successfully");
     } catch (error) {
         console.error("Error syncing odds:", error);
      }
 });
+

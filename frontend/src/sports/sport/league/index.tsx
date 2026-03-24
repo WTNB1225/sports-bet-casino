@@ -77,7 +77,7 @@ export default function League() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/80">League Detail</p>
                 <h2 className="mt-2 text-3xl font-semibold text-amber-50 md:text-4xl">{leagueId}</h2>
                 {eventDetails && eventDetails.markets.length === 0 && (
-                    <p className="mt-2 text-sm text-slate-400">Loading league details...</p>
+                    <p className="mt-2 text-sm text-slate-400">No events available for this league.</p>
                 )}
             </div>
 

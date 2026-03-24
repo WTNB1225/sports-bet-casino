@@ -103,7 +103,7 @@ export function AppSidebar() {
             }
         }
         fetchSports();
-    }, [client]);
+    }, [client, location.pathname]);
 
     return (
         <Sidebar collapsible="icon">

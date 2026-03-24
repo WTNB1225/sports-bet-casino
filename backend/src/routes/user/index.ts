@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { createUserSchema, signInWithIdentifierSchema } from "./schema";
-import { prisma } from "../../../../backend/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { createFirebaseCustomToken } from "../../middleware/middleware";
 
 export const userRoutes = new Hono<{ Variables: { uid: string; email: string } }>()

@@ -1,6 +1,6 @@
 import { HTTPException } from "hono/http-exception";
-import { Prisma } from "../../lib/generated/prisma/client";
-import { prisma } from "../../lib/prisma";
+import { Prisma } from "@/lib/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
 import "dotenv/config";
 
 export const syncOdds = async (sportsLeague: string, region: string, market: string, bookmaker: string) => {
@@ -57,6 +57,7 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                             marketType: marketData.key,
                         }
                     });
+                    //TODO: outcomeはapi依存, market[0]はh2h指定する場合正しいが、他のmarketの場合は要検討
                     for (const outcome of bookmaker.markets[0].outcomes) {
                         await tx.odd.upsert({
                             where: {

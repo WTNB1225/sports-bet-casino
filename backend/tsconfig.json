@@ -4,5 +4,8 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "types": ["bun", "node"],
+    "paths": {
+      "@/*": ["./*"]
+    },
   }
 }

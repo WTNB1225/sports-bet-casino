@@ -18,7 +18,7 @@ export default function Logout() {
   }, []);
 
   return (
-    <div className="flex min-h-svh items-center justify-center">
+    <div className="flex min-h-full items-center justify-center">
       <p>ログアウト中...</p>
     </div>
   );

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -14,9 +8,82 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  firebaseUid   String   @unique
-  userId        String   @unique
-  email         String   @unique
+  id          String   @id @default(cuid())
+  firebaseUid String   @unique
+  userId      String   @unique
+  email       String   @unique
+  createdAt   DateTime @default(now())
+  account     Account?
+  bets        Bet[]
+}
+
+model Account {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   BigInt   @default(0)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+//競技種目
+model Sport {
+  id     String  @id
+  name   String
+  leagues League[]
+}
+
+//リーグ
+model League {
+  id      String  @id
+  name    String
+  sportId String
+  sport   Sport   @relation(fields: [sportId], references: [id])
+  events  Event[]
+}
+
+//試合
+model Event {
+  id        String   @id
+  name      String
+  leagueId  String
+  league    League   @relation(fields: [leagueId], references: [id])
+  startTime DateTime
+  markets   Market[]
+}
+
+model Market {
+  id         String @id
+  eventId    String
+  marketType String
+  event      Event  @relation(fields: [eventId], references: [id])
+  odds       Odd[]
+  @@unique([eventId, marketType]) // 同一イベント内で同一マーケットタイプは存在できないようにする
+}
+
+model Odd {
+  id       String  @id @default(cuid())
+  marketId String
+  name     String  // "Arsenal", "Draw", "Over 2.5" などの名前が必要
+  value    Decimal @db.Decimal(10, 2)
+  bets     Bet[]
+  market   Market  @relation(fields: [marketId], references: [id])
+  @@unique([marketId, name]) // 同一マーケット内で同一オッズ名は存在できないようにする
+}
+
+model Bet {
+  id        String   @id @default(cuid())
+  userId    String
+  oddId     String
+  amount    BigInt
+  outcome   Outcome  @default(PENDING)
+  createdAt DateTime @default(now())
+  odd       Odd      @relation(fields: [oddId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum Outcome {
+  PENDING
+  WON
+  LOST
+  VOID
 }

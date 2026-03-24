@@ -7,20 +7,29 @@ import Signup from './signup/index.tsx'
 import SignIn from './signin/index.tsx'
 import Logout from './logout/index.tsx'
 import Sports from './sports/index.tsx'
+import { AppSidebar } from '@/components/app-sidebar'
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AuthProvider } from './contexts/AuthContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
-  <BrowserRouter>
-    <StrictMode>
+  <StrictMode>
+    <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<App />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/sports" element={<Sports />} />
-          <Route path="/logout" element={<Logout />} />
-        </Routes>
+        <SidebarProvider>
+          <AppSidebar />
+          <main className="flex min-h-svh flex-1 items-center justify-center px-4 py-6 md:px-6">
+            <div className="w-full max-w-6xl">
+              <Routes>
+                <Route path="/" element={<App />} />
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/sports" element={<Sports />} />
+                <Route path="/logout" element={<Logout />} />
+              </Routes>
+            </div>
+          </main>
+        </SidebarProvider>
       </AuthProvider>
-    </StrictMode>
-  </BrowserRouter>
+    </BrowserRouter>
+  </StrictMode>
 )

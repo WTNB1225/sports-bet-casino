@@ -15,7 +15,8 @@ import {
 
 import { useEffect, useMemo, useState } from "react"
 import { Link, useLocation } from "react-router"
-import { Settings, User, LayoutDashboard, ChevronRight } from "lucide-react"
+import { Settings, User, LayoutDashboard, ChevronRight, Home } from "lucide-react"
+import { GiSoccerBall, GiBaseballBat } from "react-icons/gi";
 import { hc } from "hono/client"
 import type { AppType } from "../../../backend/src/index";
 
@@ -30,6 +31,16 @@ type League = {
     id: string;
     name: string;
     sportId: string;
+}
+
+function getSportIcon(sport: Sport) {
+    const name = sport.name.toLowerCase();
+    if (name.includes("soccer") || name.includes("football")) {
+        return <GiSoccerBall />;
+    }
+    if (name.includes("baseball")) {
+        return <GiBaseballBat />;
+    }
 }
 
 export function AppSidebar() {
@@ -125,8 +136,9 @@ export function AppSidebar() {
                                         onClick={() => {
                                             void handleSportToggle(sport.id);
                                         }}
-                                        className="justify-between"
+                                        tooltip={sport.name}
                                     >
+                                        {getSportIcon(sport)}
                                         <span>{sport.name}</span>
                                         <ChevronRight
                                             className={`size-4 transition-transform ${openSportId === sport.id ? "rotate-90" : ""}`}
@@ -169,7 +181,10 @@ export function AppSidebar() {
                         <SidebarMenu>
                             <SidebarMenuItem>
                                 <SidebarMenuButton asChild>
-                                    <Link to="/">Home</Link>
+                                    <a href="/">
+                                        <Home />
+                                        <span>Home</span>
+                                    </a>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         </SidebarMenu>

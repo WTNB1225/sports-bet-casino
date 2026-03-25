@@ -2,6 +2,7 @@ import { HTTPException } from "hono/http-exception";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { MarketType as PrismaMarketType } from "@/lib/generated/prisma/client";
+import { EventStatus as PrismaEventStatus } from "@/lib/generated/prisma/client";
 import "dotenv/config";
 
 export interface Outcome {
@@ -54,6 +55,31 @@ export type ResultsResponse = MatchResult[];
 
 export type OddsResponse = Match[];
 
+const getEventStatus = (event: MatchResult) => {
+    if (event.completed) {
+        return PrismaEventStatus.FINISHED;
+    }
+    const currentTime = new Date();
+    const commenceTime = new Date(event.commence_time);
+    if (currentTime > commenceTime) {
+        return PrismaEventStatus.LIVE;
+    }
+    return PrismaEventStatus.SCHEDULED;
+};
+
+const toPrismaMarketType = (marketKey: string): PrismaMarketType | null => {
+    switch (marketKey) {
+        case "h2h":
+            return PrismaMarketType.H2H;
+        case "totals":
+            return PrismaMarketType.TOTALS;
+        case "spreads":
+            return PrismaMarketType.SPREADS;
+        default:
+            return null;
+    }
+};
+
 const updateScores = async (sportsLeague: string) => {
     try {
         const res = await fetch(
@@ -62,16 +88,28 @@ const updateScores = async (sportsLeague: string) => {
             throw new HTTPException(500, { message: "Failed to fetch finished events from external API" });
         }
         const resultsData: ResultsResponse = await res.json();
-        console.log(resultsData);
+
         for (const item of resultsData) {
-            if (item.completed) continue;
+            const eventStatus = getEventStatus(item);
+
+            await prisma.event.update({
+                where: { id: item.id },
+                data: {
+                    status: eventStatus,
+                    statusUpdatedAt: new Date(),
+                    lastSeenAt: new Date(),
+                    ...(item.completed ? { endedAt: new Date(item.last_update) } : {}),
+                },
+            });
+
             const homeScoreObj = item.scores?.find(score => score.name === item.home_team);
             const awayScoreObj = item.scores?.find(score => score.name === item.away_team);
             if (!homeScoreObj || !awayScoreObj) {
                 console.warn(`Scores not found for event ${item.id}, skipping...`);
                 continue;
             }
-            const result = await prisma.score.upsert({
+
+            await prisma.score.upsert({
                 where: {
                     id: item.id,
                 },
@@ -134,13 +172,28 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                     where: { id: item.id },
                     update: {
                         startTime: new Date(item.commence_time),
-
+                        status: getEventStatus({
+                            id: item.id,
+                            sport_key: item.sport_key,
+                            sport_title: item.sport_title,
+                            commence_time: item.commence_time,
+                            completed: false,
+                            home_team: item.home_team,
+                            away_team: item.away_team,
+                            scores: null,
+                            last_update: new Date().toISOString(),
+                        }),
+                        statusUpdatedAt: new Date(),
+                        lastSeenAt: new Date(),
                     },
                     create: {
                         id: item.id,
                         name: `${item.home_team} vs ${item.away_team}`,
                         leagueId: league.id,
                         startTime: new Date(item.commence_time),
+                        status: new Date(item.commence_time) <= new Date() ? PrismaEventStatus.LIVE : PrismaEventStatus.SCHEDULED,
+                        statusUpdatedAt: new Date(),
+                        lastSeenAt: new Date(),
                     }
                 });
                 const bookmaker = item.bookmakers[0];
@@ -148,6 +201,11 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                     if (!marketData.outcomes?.length) {
                         continue;
                     }
+                    const prismaMarketType = toPrismaMarketType(marketData.key);
+                    if (!prismaMarketType) {
+                        continue;
+                    }
+
                     const market = await tx.market.upsert({
                         where: {
                             id: `${event.id}_${marketData.key}`,
@@ -156,7 +214,7 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                         create: {
                             id: `${event.id}_${marketData.key}`,
                             eventId: event.id,
-                            marketType: (marketData.key).toUpperCase() as PrismaMarketType,
+                            marketType: prismaMarketType,
                         }
                     });
                     //TODO: outcomeはapi依存, market[0]はh2h指定する場合正しいが、他のmarketの場合は要検討
@@ -177,10 +235,11 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                         });
                     }
                 }
-                updateScores(sportsLeague);
             }
             )
         };
+
+        await updateScores(sportsLeague);
     } catch (error) {
         console.error(error);
         throw new HTTPException(500, { message: "Failed to sync odds" });

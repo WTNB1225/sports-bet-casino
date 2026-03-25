@@ -6,9 +6,11 @@ import { userRoutes } from './routes/user'
 import { oddsRoutes } from './routes/odds'
 import { eventRoutes } from './routes/event'
 
+import { prisma } from '@/lib/prisma'
+
 const app = new Hono<{ Variables: { uid: string; email: string } }>()
   .use('*', logger())
-  .use('*',  cors({
+  .use('*', cors({
     origin: process.env.CORS_ORIGIN as string || 'http://localhost:3000',
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['POST', 'GET', 'OPTIONS'],
@@ -16,7 +18,7 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
     credentials: true,
   }))
   .use('*', async (c, next) => {
-    if (c.req.path === '/users/sign-in' || c.req.path === '/odds/sync' || (c.req.path).startsWith("/events")) {
+    if (c.req.path === '/users/sign-in' || c.req.path === '/odds/sync' || (c.req.path).startsWith("/events") || c.req.path === "/") {
       await next();
       return
     }
@@ -43,11 +45,26 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
   .route('/users', userRoutes)
   .route('/odds', oddsRoutes)
   .route('/events', eventRoutes)
-  
-export default { 
-  port: 3030, 
-  fetch: app.fetch, 
-} 
+  .get('/', async (c) => {
+    const result = await prisma.event.findMany({
+      where: {
+        leagueId: "soccer_epl",
+        endedAt: null,
+        startTime: {
+          gt: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+        },
+      },
+      include: {
+        score: true,
+      }
+    })
+    return c.json(result);
+  })
+
+export default {
+  port: 3030,
+  fetch: app.fetch,
+}
 
 export type AppType = typeof app
 

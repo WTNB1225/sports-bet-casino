@@ -32,6 +32,10 @@ export const eventRoutes = new Hono()
                 where: {
                     event: {
                         leagueId: leagueId,
+                        startTime: {
+                            //一週間前までのイベントも表示する
+                            gt: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+                        }
                     }
                 },
                 include: {

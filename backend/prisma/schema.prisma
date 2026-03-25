@@ -27,8 +27,8 @@ model Account {
 
 //競技種目
 model Sport {
-  id     String  @id
-  name   String
+  id      String   @id
+  name    String
   leagues League[]
 }
 
@@ -39,35 +39,57 @@ model League {
   sportId String
   sport   Sport   @relation(fields: [sportId], references: [id])
   events  Event[]
+  @@index([sportId])
 }
 
 //試合
 model Event {
-  id        String   @id
-  name      String
-  leagueId  String
-  league    League   @relation(fields: [leagueId], references: [id])
-  startTime DateTime
-  markets   Market[]
+  id              String      @id
+  name            String
+  leagueId        String
+  league          League      @relation(fields: [leagueId], references: [id])
+  status          EventStatus @default(SCHEDULED)
+  statusUpdatedAt DateTime    @default(now())
+  lastSeenAt      DateTime    @default(now())
+  endedAt         DateTime?
+  startTime       DateTime
+  markets         Market[]
+  score           Score?
+  @@index([leagueId])
+  @@index([startTime])
+  @@index([status])
+}
+
+model Score {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  homeScore Int
+  awayScore Int
+  updatedAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model Market {
-  id         String @id
+  id         String     @id
   eventId    String
-  marketType String
-  event      Event  @relation(fields: [eventId], references: [id])
+  marketType MarketType
+  line       Decimal    @default(0) @db.Decimal(6, 2)
+  event      Event      @relation(fields: [eventId], references: [id])
   odds       Odd[]
-  @@unique([eventId, marketType]) // 同一イベント内で同一マーケットタイプは存在できないようにする
+  @@unique([eventId, marketType, line]) // TOTAL/SPREADで複数ラインを扱えるようにする
+  @@index([eventId])
+  @@index([eventId, marketType])
 }
 
 model Odd {
   id       String  @id @default(cuid())
   marketId String
-  name     String  // "Arsenal", "Draw", "Over 2.5" などの名前が必要
+  name     String  // "Arsenal", "Draw", "Over", "Under" など
   value    Decimal @db.Decimal(10, 2)
   bets     Bet[]
   market   Market  @relation(fields: [marketId], references: [id])
-  @@unique([marketId, name]) // 同一マーケット内で同一オッズ名は存在できないようにする
+  @@unique([marketId, name])
+  @@index([marketId])
 }
 
 model Bet {
@@ -86,4 +108,18 @@ enum Outcome {
   WON
   LOST
   VOID
+}
+
+enum MarketType {
+  H2H
+  TOTALS
+  SPREADS
+}
+
+enum EventStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+  CANCELED
 }

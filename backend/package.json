@@ -1,7 +1,8 @@
 {
   "name": "backend",
   "scripts": {
-    "dev": "bun run --hot src/index.ts & bun run --hot src/worker.ts"
+    "dev": "bun run --hot src/index.ts",
+    "workerdev": "bun run --hot src/worker.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",

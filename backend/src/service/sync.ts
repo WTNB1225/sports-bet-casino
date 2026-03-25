@@ -91,15 +91,24 @@ const updateScores = async (sportsLeague: string) => {
 
         for (const item of resultsData) {
             const eventStatus = getEventStatus(item);
-
-            await prisma.event.update({
+            await prisma.event.upsert({
                 where: { id: item.id },
-                data: {
+                update: {
                     status: eventStatus,
                     statusUpdatedAt: new Date(),
                     lastSeenAt: new Date(),
                     ...(item.completed ? { endedAt: new Date(item.last_update) } : {}),
                 },
+                create: {
+                    id: item.id,
+                    name: `${item.home_team} vs ${item.away_team}`,
+                    leagueId: item.sport_key,
+                    startTime: new Date(item.commence_time),
+                    status: eventStatus,
+                    statusUpdatedAt: new Date(),
+                    lastSeenAt: new Date(),
+                    ...(item.completed ? { endedAt: new Date(item.last_update) } : {}),
+                }
             });
 
             const homeScoreObj = item.scores?.find(score => score.name === item.home_team);

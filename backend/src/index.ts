@@ -18,7 +18,7 @@ const app = new Hono<{ Variables: { uid: string; email: string; userId: string }
     credentials: true,
   }))
   .use('*', async (c, next) => {
-    if (c.req.path === '/users/sign-in' || (c.req.path).startsWith("/events")) {
+    if (c.req.path === '/users/sign-in') {
       await next();
       return
     }

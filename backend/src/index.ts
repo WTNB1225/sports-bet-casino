@@ -2,13 +2,13 @@ import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
 import { verifyFirebaseToken } from './middleware/middleware'
+import { prisma } from '@/lib/prisma'
 import { userRoutes } from './routes/user'
 import { oddsRoutes } from './routes/odds'
 import { eventRoutes } from './routes/event'
+import { betRoutes } from './routes/bet'
 
-import { prisma } from '@/lib/prisma'
-
-const app = new Hono<{ Variables: { uid: string; email: string } }>()
+const app = new Hono<{ Variables: { uid: string; email: string; userId: string } }>()
   .use('*', logger())
   .use('*', cors({
     origin: process.env.CORS_ORIGIN as string || 'http://localhost:3000',
@@ -18,7 +18,7 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
     credentials: true,
   }))
   .use('*', async (c, next) => {
-    if (c.req.path === '/users/sign-in' || c.req.path === '/odds/sync' || (c.req.path).startsWith("/events") || c.req.path === "/") {
+    if (c.req.path === '/users/sign-in' || (c.req.path).startsWith("/events")) {
       await next();
       return
     }
@@ -37,6 +37,13 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
         return c.json({ error: 'Email not found in token' }, 401)
       }
       c.set("email", decodedToken.email);
+      if (c.req.path !== '/users/registered' && c.req.path !== '/users') {
+        const user = await prisma.user.findUnique({ where: { firebaseUid: decodedToken.uid } });
+        if (!user) {
+          return c.json({ error: 'User not found' }, 404)
+        }
+        c.set("userId", user.userId);
+      }
     } catch (error) {
       return c.json({ error: 'Invalid token' }, 401)
     }
@@ -45,21 +52,7 @@ const app = new Hono<{ Variables: { uid: string; email: string } }>()
   .route('/users', userRoutes)
   .route('/odds', oddsRoutes)
   .route('/events', eventRoutes)
-  .get('/', async (c) => {
-    const result = await prisma.event.findMany({
-      where: {
-        leagueId: "soccer_epl",
-        endedAt: null,
-        startTime: {
-          gt: new Date(Date.now() - 7 * 24 * 3600 * 1000),
-        },
-      },
-      include: {
-        score: true,
-      }
-    })
-    return c.json(result);
-  })
+  .route('/bets', betRoutes)
 
 export default {
   port: 3030,

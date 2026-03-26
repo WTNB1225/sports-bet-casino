@@ -20,7 +20,8 @@ model User {
 model Account {
   id        String   @id @default(cuid())
   userId    String   @unique
-  balance   BigInt   @default(0)
+  balance   BigInt   @default(0) // 1円を1/100で表す
+
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -92,6 +93,7 @@ model Odd {
   @@index([marketId])
 }
 
+
 model Bet {
   id        String   @id @default(cuid())
   userId    String
@@ -100,7 +102,7 @@ model Bet {
   outcome   Outcome  @default(PENDING)
   createdAt DateTime @default(now())
   odd       Odd      @relation(fields: [oddId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [userId])
 }
 
 enum Outcome {

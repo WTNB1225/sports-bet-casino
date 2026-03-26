@@ -27,6 +27,7 @@ export default function Signup() {
                 return;
             }
             const idToken = await targetUser.getIdToken();
+            console.log(idToken);
             if (!idToken) {
                 console.error("Failed to get idToken");
                 return;

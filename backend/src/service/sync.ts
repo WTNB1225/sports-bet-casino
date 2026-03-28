@@ -89,7 +89,7 @@ const updateScores = async (sportsLeague: string) => {
         }
         const resultsData: ResultsResponse = await res.json();
 
-        for (const item of resultsData) {
+        await Promise.all(resultsData.map(async (item) => {
             const eventStatus = getEventStatus(item);
             await prisma.event.upsert({
                 where: { id: item.id },
@@ -115,7 +115,7 @@ const updateScores = async (sportsLeague: string) => {
             const awayScoreObj = item.scores?.find(score => score.name === item.away_team);
             if (!homeScoreObj || !awayScoreObj) {
                 console.warn(`Scores not found for event ${item.id}, skipping...`);
-                continue;
+                return;
             }
 
             await prisma.score.upsert({
@@ -134,10 +134,35 @@ const updateScores = async (sportsLeague: string) => {
                     awayScore: parseInt(awayScoreObj.score),
                     updatedAt: new Date(),
                 }
-            })
-        }
+            });
+        }));
     } catch (error) {
         throw new HTTPException(500, { message: "Failed to fetch finished events" });
+    }
+}
+
+// TODO: DBのデータを追加 joinを１回のみ
+export const updateBetsStatus = async () => {
+    try {
+        const bets = await prisma.event.findMany({
+            where: {
+                status: PrismaEventStatus.FINISHED || PrismaEventStatus.CANCELED || PrismaEventStatus.POSTPONED,
+            },
+            include: {
+                markets: {
+                    include: {
+                        odds: {
+                            include: {
+                                bets: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        console.log(bets);
+    } catch (error) {
+        throw new HTTPException(500, { message: "Faild to update bet result" });
     }
 }
 
@@ -150,13 +175,14 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
             throw new HTTPException(500, { message: "Failed to fetch odds from external API" });
         }
         const oddsData: OddsResponse = await res.json();
-        console.log(oddsData)
-        for (const item of oddsData) {
-            console.log(item.bookmakers)
+        console.log(oddsData);
+
+        await Promise.all(oddsData.map(async (item) => {
+            console.log(item.bookmakers);
             console.log(`${item.bookmakers?.[0]?.title} - ${item.home_team} vs ${item.away_team} (${item.commence_time})`);
             if (!item.bookmakers || item.bookmakers.length === 0) {
                 console.warn(`No bookmaker data for event ${item.id}, skipping...`);
-                continue;
+                return;
             }
             const sportId = item.sport_key.split("_")[0];
             await prisma.$transaction(async (tx) => {
@@ -227,7 +253,7 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                         }
                     });
                     //TODO: outcomeはapi依存, market[0]はh2h指定する場合正しいが、他のmarketの場合は要検討
-                    for (const outcome of marketData.outcomes) {
+                    await Promise.all(marketData.outcomes.map(async (outcome) => {
                         await tx.odd.upsert({
                             where: {
                                 id: `${event.id}_${marketData.key}_${outcome.name}`,
@@ -242,11 +268,10 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                                 value: new Prisma.Decimal(outcome.price),
                             }
                         });
-                    }
+                    }));
                 }
-            }
-            )
-        };
+            });
+        }));
 
         await updateScores(sportsLeague);
     } catch (error) {

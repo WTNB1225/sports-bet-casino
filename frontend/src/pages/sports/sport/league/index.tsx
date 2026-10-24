@@ -53,9 +53,9 @@ export default function League() {
   const [selectedOddIds, setSelectedOddIds] = useState<string[]>([]);
   const [betList, setBetList] = useState<BetSelection[]>([]);
   const [stakeByOddId, setStakeByOddId] = useState<Record<string, string>>({});
+  const [betSubmitStatus, setBetSubmitStatus] = useState<"idle" | "submitting" | "success" | "partial">("idle");
+  const [betResults, setBetResults] = useState<Record<string, "success" | "fail">>({});
   const { user, loading } = useAuthContext();
-  console.log("user in League component:", user);
-  console.log("loading in League component:", loading);
 
   const client = useMemo(() => {
     return hc<AppType>(import.meta.env.VITE_BACKEND_URL as string);
@@ -90,7 +90,8 @@ export default function League() {
   const addBet = (eventName: string, marketType: string, odd: EventDetails["markets"][number]["odds"][number]) => {
     setBetList((prev) => {
       if (prev.some((item) => item.oddId === odd.id)) {
-        return prev;
+        removeBet(odd.id);
+        return prev.filter((item) => item.oddId !== odd.id);
       }
       return [
         ...prev,
@@ -126,42 +127,58 @@ export default function League() {
     if (betList.length === 0 || !user || loading) {
       return;
     }
+    setBetSubmitStatus("submitting");
+    setBetResults({});
     try {
       const idToken = await user?.getIdToken();
       if (!idToken) {
         console.error("User is not authenticated");
+        setBetSubmitStatus("idle");
         return;
       }
-      betList.forEach(async (bet) => {
+      const results: Record<string, "success" | "fail"> = {};
+      for (const bet of betList) {
         const oddId = bet.oddId;
         const stake = Number(stakeByOddId[bet.oddId]);
         if (!Number.isFinite(stake) || stake <= 0) {
-          console.warn(`Invalid stake for oddId ${oddId}, skipping...`);
-          return;
+          results[oddId] = "fail";
+          continue;
         }
-        const res = await client.bets.$post(
-          {
-            json: {
-              oddId,
-              amount: stake,
-            }
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${idToken}`,
+        try {
+          const res = await client.bets.$post(
+            {
+              json: {
+                oddId,
+                amount: stake,
+              }
             },
+            {
+              headers: {
+                Authorization: `Bearer ${idToken}`,
+              },
+            }
+          );
+          if (res.ok) {
+            results[oddId] = "success";
+          } else {
+            results[oddId] = "fail";
           }
-        )
-        if (!res.ok) {
-          console.error(`Failed to submit bet for oddId ${oddId}`);
-          return;
+        } catch (e) {
+          results[oddId] = "fail";
         }
-        console.log(`Bet submitted for oddId ${oddId}`);
-      })
+      }
+      setBetResults(results);
+      const allSuccess = betList.every((bet) => results[bet.oddId] === "success");
+      if (allSuccess) {
+        setBetSubmitStatus("success");
+      } else {
+        setBetSubmitStatus("partial");
+      }
     } catch (error) {
       console.error("Error submitting bets:", error);
+      setBetSubmitStatus("idle");
     }
-  }
+  };
 
   return (
         <div className="w-full space-y-6">
@@ -187,81 +204,136 @@ export default function League() {
                 Bet Slip ({betList.length})
             </button>
             <aside
-                className={`fixed right-0 top-0 z-50 h-svh w-full max-w-md border-l border-emerald-200/20 bg-slate-900 p-6 shadow-2xl transition-transform duration-300 ${displayBet ? "translate-x-0" : "translate-x-full"
-                    }`}
+              className={`fixed right-0 top-0 z-50 h-svh w-full max-w-md border-l border-emerald-200/20 bg-slate-900 p-6 shadow-2xl transition-transform duration-300 ${displayBet ? "translate-x-0" : "translate-x-full"
+                }`}
             >
-                <div className="mb-4 flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">Your Bets</p>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">Your Bets</p>
+                <button
+                  type="button"
+                  onClick={() => setDisplayBet(false)}
+                  className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-800"
+                >
+                  Close
+                </button>
+              </div>
+                {betSubmitStatus === "success" ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-6">
+                    <p className="text-lg font-semibold text-emerald-300">Bet submitted successfully!</p>
                     <button
-                        type="button"
-                        onClick={() => setDisplayBet(false)}
-                        className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-800"
+                      type="button"
+                      className="rounded-md bg-amber-300 px-6 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-200"
+                      onClick={() => {
+                        setDisplayBet(false);
+                        setBetList([]);
+                        setSelectedOddIds([]);
+                        setStakeByOddId({});
+                        setBetSubmitStatus("idle");
+                        setBetResults({});
+                      }}
                     >
-                        Close
+                      OK
                     </button>
-                </div>
-                
-                {betList.length > 0 ? (
-                    <>
-                    <ul className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100svh - 90px)" }}>
-                        {betList.map((bet) => (
-                            <li key={bet.oddId} className="rounded-lg border border-slate-700/70 bg-slate-950/50 p-3">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-100">{bet.eventName}</p>
-                                        <p className="mt-1 text-xs text-slate-400">{bet.marketType} / {bet.oddName}</p>
-                                        <p className="mt-1 text-sm font-semibold text-emerald-300">{bet.oddValue}</p>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            placeholder="Enter stake"
-                                            value={stakeByOddId[bet.oddId] ?? ""}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                setStakeByOddId((prev) => ({
-                                                    ...prev,
-                                                    [bet.oddId]: value,
-                                                }));
-                                            }}
-                                            className="mt-2 block w-full rounded-md border border-slate-700 bg-slate-800 px-5 text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                        />
-                                        {(() => {
-                                            const stake = Number(stakeByOddId[bet.oddId] ?? 0);
-                                            const oddValue = Number(bet.oddValue);
-                                            if (!Number.isFinite(stake) || stake <= 0 || !Number.isFinite(oddValue) || oddValue <= 0) {
-                                                return null;
-                                            }
-                                            const potentialWin = stake * oddValue;
-                                            return (
-                                                <p className="mt-2 text-xs font-semibold text-emerald-200">
-                                                    Payout: {potentialWin.toFixed(2)}
-                                                </p>
-                                            );
-                                        })()}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeBet(bet.oddId)}
-                                        className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-800"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            </li>
-                        ))}
+                  </div>
+                ) : betSubmitStatus === "partial" ? (
+                  <div className="flex flex-col gap-4">
+                    <p className="text-lg font-semibold text-amber-200">Some bets failed to submit.</p>
+                    <ul className="space-y-2">
+                      {betList.map((bet) => (
+                        <li key={bet.oddId} className="flex items-center gap-2">
+                          <span className="truncate text-xs text-slate-300">{bet.eventName} / {bet.marketType} / {bet.oddName}</span>
+                          {betResults[bet.oddId] === "success" ? (
+                            <span className="ml-2 rounded bg-emerald-600 px-2 py-0.5 text-xs text-white">Success</span>
+                          ) : (
+                            <span className="ml-2 rounded bg-rose-600 px-2 py-0.5 text-xs text-white">Failed</span>
+                          )}
+                        </li>
+                      ))}
                     </ul>
                     <button
-                        type="button"
-                        onClick={submitBets}
-                        className="mt-4 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                      type="button"
+                      className="rounded-md bg-amber-300 px-6 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-200"
+                      onClick={() => {
+                        setBetList((prev) => prev.filter((bet) => betResults[bet.oddId] !== "success"));
+                        setSelectedOddIds((prev) => prev.filter((id) => betResults[id] !== "success"));
+                        setStakeByOddId((prev) => {
+                          const next = { ...prev };
+                          Object.keys(betResults).forEach((oddId) => {
+                            if (betResults[oddId] === "success") delete next[oddId];
+                          });
+                          return next;
+                        });
+                        setBetSubmitStatus("idle");
+                        setBetResults({});
+                      }}
                     >
-                        Submit Bets
+                      OK（失敗分だけ残す）
                     </button>
-                    </>
-                ) : (
-                    <p className="text-sm text-slate-400">No bets selected yet.</p>
-                )}
+                  </div>
+                ) : betList.length > 0 ? (
+                <>
+                <ul className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100svh - 90px)" }}>
+                  {betList.map((bet) => (
+                    <li key={bet.oddId} className="rounded-lg border border-slate-700/70 bg-slate-950/50 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-100">{bet.eventName}</p>
+                          <p className="mt-1 text-xs text-slate-400">{bet.marketType} / {bet.oddName}</p>
+                          <p className="mt-1 text-sm font-semibold text-emerald-300">{bet.oddValue}</p>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Enter stake"
+                            value={stakeByOddId[bet.oddId] ?? ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setStakeByOddId((prev) => ({
+                                ...prev,
+                                [bet.oddId]: value,
+                              }));
+                            }}
+                            className="mt-2 block w-full rounded-md border border-slate-700 bg-slate-800 px-5 text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            disabled={betSubmitStatus === "submitting"}
+                          />
+                          {(() => {
+                            const stake = Number(stakeByOddId[bet.oddId] ?? 0);
+                            const oddValue = Number(bet.oddValue);
+                            if (!Number.isFinite(stake) || stake <= 0 || !Number.isFinite(oddValue) || oddValue <= 0) {
+                              return null;
+                            }
+                            const potentialWin = stake * oddValue;
+                            return (
+                              <p className="mt-2 text-xs font-semibold text-emerald-200">
+                                Payout: {potentialWin.toFixed(2)}
+                              </p>
+                            );
+                          })()}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeBet(bet.oddId)}
+                          className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-800"
+                          disabled={betSubmitStatus === "submitting"}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={submitBets}
+                  className="mt-4 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                  disabled={betSubmitStatus === "submitting"}
+                >
+                  {betSubmitStatus === "submitting" ? "Submitting..." : "Submit Bets"}
+                </button>
+                </>
+              ) : (
+                <p className="text-sm text-slate-400">No bets selected yet.</p>
+              )}
             </aside>
 
             <div className="rounded-2xl border border-amber-100/20 bg-slate-900 p-6 shadow-lg">

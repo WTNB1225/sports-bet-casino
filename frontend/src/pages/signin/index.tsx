@@ -3,7 +3,7 @@ import { GalleryVerticalEnd } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { signInWithPopup, GoogleAuthProvider, signInWithCustomToken, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import type { AppType } from "../../../backend/src/index";
+import type { AppType } from "../../../../backend/src/index";
 import { hc } from "hono/client";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";

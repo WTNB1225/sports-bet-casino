@@ -1,6 +1,6 @@
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, type User } from "firebase/auth";
-import { auth } from "../lib/firebase";
-import type { AppType } from "../../../backend/src/index";
+import { auth } from "../../lib/firebase";
+import type { AppType } from "../../../../backend/src/index";
 import { hc } from "hono/client";
 import { GalleryVerticalEnd } from "lucide-react"
 import { SignUpForm } from "@/components/signup-form";
@@ -137,8 +137,8 @@ export default function Signup() {
             {openUserIdModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
-                        <h2 className="mb-2 text-lg font-semibold">ユーザーIDを登録</h2>
-                        <p className="mb-4 text-sm text-gray-600">
+                        <h2 className="mb-2 text-black font-semibold">ユーザーIDを登録</h2>
+                        <p className="mb-4 text-sm text-black">
                             初回ログインです。ユーザーIDを入力してください。
                         </p>
                         <input
@@ -146,7 +146,7 @@ export default function Signup() {
                             value={userId}
                             onChange={(e) => setUserId(e.target.value)}
                             placeholder="userID"
-                            className="mb-4 w-full rounded border p-2"
+                            className="mb-4 w-full rounded text-black border p-2"
                             minLength={3}
                         />
                         <div className="flex justify-end gap-2">

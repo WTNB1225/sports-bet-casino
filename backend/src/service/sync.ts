@@ -89,53 +89,55 @@ const updateScores = async (sportsLeague: string) => {
         }
         const resultsData: ResultsResponse = await res.json();
 
-        await Promise.all(resultsData.map(async (item) => {
-            const eventStatus = getEventStatus(item);
-            await prisma.event.upsert({
-                where: { id: item.id },
-                update: {
-                    status: eventStatus,
-                    statusUpdatedAt: new Date(),
-                    lastSeenAt: new Date(),
-                    ...(item.completed ? { endedAt: new Date(item.last_update) } : {}),
-                },
-                create: {
-                    id: item.id,
-                    name: `${item.home_team} vs ${item.away_team}`,
-                    leagueId: item.sport_key,
-                    startTime: new Date(item.commence_time),
-                    status: eventStatus,
-                    statusUpdatedAt: new Date(),
-                    lastSeenAt: new Date(),
-                    ...(item.completed ? { endedAt: new Date(item.last_update) } : {}),
-                }
-            });
+        await prisma.$transaction(
+            resultsData.map((item) => {
+                const eventStatus = getEventStatus(item);
 
-            const homeScoreObj = item.scores?.find(score => score.name === item.home_team);
-            const awayScoreObj = item.scores?.find(score => score.name === item.away_team);
-            if (!homeScoreObj || !awayScoreObj) {
-                console.warn(`Scores not found for event ${item.id}, skipping...`);
-                return;
-            }
+                const homeScoreObj = item.scores?.find(s => s.name === item.home_team);
+                const awayScoreObj = item.scores?.find(s => s.name === item.away_team);
 
-            await prisma.score.upsert({
-                where: {
-                    id: item.id,
-                },
-                update: {
-                    homeScore: parseInt(homeScoreObj.score),
-                    awayScore: parseInt(awayScoreObj.score),
-                    updatedAt: new Date(),
-                },
-                create: {
-                    id: item.id,
-                    eventId: item.id,
-                    homeScore: parseInt(homeScoreObj.score),
-                    awayScore: parseInt(awayScoreObj.score),
-                    updatedAt: new Date(),
+                const eventUpsert = prisma.event.upsert({
+                    where: { id: item.id },
+                    update: {
+                        status: eventStatus,
+                        statusUpdatedAt: new Date(),
+                        lastSeenAt: new Date(),
+                        ...(item.completed ? { endedAt: new Date(item.last_update) } : {}),
+                    },
+                    create: {
+                        id: item.id,
+                        name: `${item.home_team} vs ${item.away_team}`,
+                        leagueId: item.sport_key,
+                        startTime: new Date(item.commence_time),
+                        status: eventStatus,
+                        statusUpdatedAt: new Date(),
+                        lastSeenAt: new Date(),
+                        ...(item.completed ? { endedAt: new Date(item.last_update) } : {}),
+                    }
+                });
+
+                if (homeScoreObj && awayScoreObj) {
+                    const scoreUpsert = prisma.score.upsert({
+                        where: { id: item.id },
+                        update: {
+                            homeScore: Number(homeScoreObj.score) || 0,
+                            awayScore: Number(awayScoreObj.score) || 0,
+                            updatedAt: new Date(),
+                        },
+                        create: {
+                            id: item.id,
+                            eventId: item.id,
+                            homeScore: Number(homeScoreObj.score) || 0,
+                            awayScore: Number(awayScoreObj.score) || 0,
+                            updatedAt: new Date(),
+                        }
+                    });
+                    return [eventUpsert, scoreUpsert];
                 }
-            });
-        }));
+
+                return [eventUpsert];
+            }).flat()
+        );
     } catch (error) {
         throw new HTTPException(500, { message: "Failed to fetch finished events" });
     }
@@ -176,37 +178,43 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
         }
         const oddsData: OddsResponse = await res.json();
         console.log(oddsData);
+        const operations: Prisma.PrismaPromise<any>[] = [];
 
-        await Promise.all(oddsData.map(async (item) => {
-            console.log(item.bookmakers);
-            console.log(`${item.bookmakers?.[0]?.title} - ${item.home_team} vs ${item.away_team} (${item.commence_time})`);
+        for (const item of oddsData) {
             if (!item.bookmakers || item.bookmakers.length === 0) {
                 console.warn(`No bookmaker data for event ${item.id}, skipping...`);
-                return;
+                continue;
             }
+
             const sportId = item.sport_key.split("_")[0];
-            await prisma.$transaction(async (tx) => {
-                const sport = await tx.sport.upsert({
+            const eventStartTime = new Date(item.commence_time);
+            const now = new Date();
+
+            operations.push(
+                prisma.sport.upsert({
                     where: { id: sportId },
                     update: {},
-                    create: {
-                        id: sportId,
-                        name: sportId,
-                    }
-                });
-                const league = await tx.league.upsert({
+                    create: { id: sportId, name: sportId }
+                })
+            );
+
+            operations.push(
+                prisma.league.upsert({
                     where: { id: item.sport_key },
                     update: {},
                     create: {
                         id: item.sport_key,
                         name: item.sport_title,
-                        sportId: sport.id,
+                        sportId: sportId,
                     }
-                });
-                const event = await tx.event.upsert({
+                })
+            );
+
+            operations.push(
+                prisma.event.upsert({
                     where: { id: item.id },
                     update: {
-                        startTime: new Date(item.commence_time),
+                        startTime: eventStartTime,
                         status: getEventStatus({
                             id: item.id,
                             sport_key: item.sport_key,
@@ -216,63 +224,61 @@ export const syncOdds = async (sportsLeague: string, region: string, market: str
                             home_team: item.home_team,
                             away_team: item.away_team,
                             scores: null,
-                            last_update: new Date().toISOString(),
-                        }),
-                        statusUpdatedAt: new Date(),
-                        lastSeenAt: new Date(),
+                            last_update: item.bookmakers[0].last_update,
+                        }), 
+                        statusUpdatedAt: now,
+                        lastSeenAt: now,
                     },
                     create: {
                         id: item.id,
                         name: `${item.home_team} vs ${item.away_team}`,
-                        leagueId: league.id,
-                        startTime: new Date(item.commence_time),
-                        status: new Date(item.commence_time) <= new Date() ? PrismaEventStatus.LIVE : PrismaEventStatus.SCHEDULED,
-                        statusUpdatedAt: new Date(),
-                        lastSeenAt: new Date(),
+                        leagueId: item.sport_key,
+                        startTime: eventStartTime,
+                        status: eventStartTime <= now ? 'LIVE' : 'SCHEDULED',
+                        statusUpdatedAt: now,
+                        lastSeenAt: now,
                     }
-                });
-                const bookmaker = item.bookmakers[0];
-                for (const marketData of bookmaker.markets) {
-                    if (!marketData.outcomes?.length) {
-                        continue;
-                    }
-                    const prismaMarketType = toPrismaMarketType(marketData.key);
-                    if (!prismaMarketType) {
-                        continue;
-                    }
+                })
+            );
 
-                    const market = await tx.market.upsert({
-                        where: {
-                            id: `${event.id}_${marketData.key}`,
-                        },
+            const bookmaker = item.bookmakers[0];
+            for (const marketData of bookmaker.markets) {
+                if (!marketData.outcomes?.length) continue;
+                const prismaMarketType = toPrismaMarketType(marketData.key);
+                if (!prismaMarketType) continue;
+                const marketId = `${item.id}_${marketData.key}`;
+                operations.push(
+                    prisma.market.upsert({
+                        where: { id: marketId },
                         update: {},
                         create: {
-                            id: `${event.id}_${marketData.key}`,
-                            eventId: event.id,
+                            id: marketId,
+                            eventId: item.id,
                             marketType: prismaMarketType,
                         }
-                    });
-                    //TODO: outcomeはapi依存, market[0]はh2h指定する場合正しいが、他のmarketの場合は要検討
-                    await Promise.all(marketData.outcomes.map(async (outcome) => {
-                        await tx.odd.upsert({
-                            where: {
-                                id: `${event.id}_${marketData.key}_${outcome.name}`,
-                            },
+                    })
+                );
+                for (const outcome of marketData.outcomes) {
+                    operations.push(
+                        prisma.odd.upsert({
+                            where: { id: `${marketId}_${outcome.name}` },
                             update: {
                                 value: new Prisma.Decimal(outcome.price),
                             },
                             create: {
-                                id: `${event.id}_${marketData.key}_${outcome.name}`,
-                                marketId: `${event.id}_${marketData.key}`,
+                                id: `${marketId}_${outcome.name}`,
+                                marketId: marketId,
                                 name: outcome.name,
                                 value: new Prisma.Decimal(outcome.price),
                             }
-                        });
-                    }));
+                        })
+                    );
                 }
-            });
-        }));
-
+            }
+        }
+        console.log(`Starting transaction for ${operations.length} operations...`);
+        await prisma.$transaction(operations);
+        console.log("Sync completed successfully.");
         await updateScores(sportsLeague);
     } catch (error) {
         console.error(error);
